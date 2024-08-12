@@ -1,6 +1,9 @@
 use std::{env, fs};
 use std::process::ExitCode;
-use std::io::{stdin};
+use std::io::stdin;
+
+pub mod token;
+pub mod scanner;
 
 static ERROR_STATE : bool = false;
 
