@@ -2,8 +2,13 @@ use std::{env, fs};
 use std::process::ExitCode;
 use std::io::stdin;
 
+use token::token::{Token, TokenType};
+
 pub mod token;
 pub mod scanner;
+pub mod parser;
+pub mod stmt;
+pub mod expr;
 
 static ERROR_STATE : bool = false;
 
@@ -53,4 +58,12 @@ fn error(line: i32, message: String) {
 
 fn report(line: i32, where_report: String, message: String) {
     eprintln!("[line {:?}] Error {:?} : {:?}", line, where_report, message);
+}
+
+fn parser_error(token: &Token, message: String) {
+    if token.token_type == TokenType::Eof {
+        report(token.line, " at end".to_string(), message);
+    } else {
+        report(token.line, " at end", message);
+    }
 }

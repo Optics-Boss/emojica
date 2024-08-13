@@ -4,8 +4,6 @@ pub mod scanner {
 
     use crate::{error, token::token::{Token, TokenType}};
 
-
-
     pub struct Scanner {
         source: String,
         tokens: Vec<Token>,

@@ -9,10 +9,11 @@ pub mod token {
         And, Else, False, True, Fun, For, If, Nil, Or, Print, Return, Var, While, Eof
     }
 
+    #[derive(Clone)]
     pub struct Token {
-        token_type: TokenType,
+        pub token_type: TokenType,
         lexeme: String,
-        line: i32,
+        pub line: i32,
     }
 
     impl Token {
