@@ -32,6 +32,7 @@ pub mod expr {
             right: Box<Expr>
         },
         Set {
+            object: Box<Expr>,
             name: Token,
             value: Box<Expr>
         },
