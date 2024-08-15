@@ -9,6 +9,10 @@ pub mod scanner;
 pub mod parser;
 pub mod stmt;
 pub mod expr;
+pub mod interpreter;
+pub mod environment;
+pub mod object;
+pub mod function;
 
 static ERROR_STATE : bool = false;
 
