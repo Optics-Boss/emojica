@@ -42,7 +42,7 @@ pub mod parser {
             let statement = if matches!(self, TokenType::Var) {
                 self.var_declaration()
             } else if matches!(self, TokenType::Fun) {
-                self.function("function")
+                self.function("function".to_string())
             } else {
                 self.statement()
             };
@@ -55,6 +55,7 @@ pub mod parser {
                 other => other,
             }
         }
+
 
         fn var_declaration(&mut self) -> Result<Stmt, Error> {
             let name = self.consume(TokenType::Identifier, "Expect variable name.".to_string())?;
@@ -69,6 +70,192 @@ pub mod parser {
 
             Ok(Stmt::Var { name, initializer })
         }
+
+        fn function(&mut self, kind: String) -> Result<Stmt, Error> {
+            let name = self.consume(
+                TokenType::Identifier,
+                format!("Expect {} name.", kind)
+            )?;
+
+            self.consume(TokenType::LeftParen, format!("Expect '(' {} name.", kind))?;
+            let mut params: Vec<Token> = Vec::new();
+
+            if !self.check(TokenType::RightParen) {
+                loop {
+                    if params.len() >= 255 {
+                        self.error(self.peek(), "Cannot have more than 255 parameters.".to_string());
+                    }
+
+                    params.push(self.consume(TokenType::Identifier, "Expect parameter name.".to_string())?);
+
+                    if !matches!(self, TokenType::Comma) {
+                        break;
+                    }
+
+                }
+            }
+
+            self.consume(TokenType::RightParen, "Expect ')'  name.".to_string())?;
+
+            self.consume(
+                TokenType::LeftBrace,
+                format!("Expect '{{' before {} body.", kind)
+            )?;
+
+            let body = self.block()?;
+            Ok(Stmt::Function { name, params, body })
+        }
+
+        fn block(&mut self) -> Result<Vec<Stmt>, Error> {
+            let mut statements: Vec<Stmt> = Vec::new();
+
+            while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+               statements.push(self.declaration()?);
+            }
+
+            self.consume(TokenType::RightBrace, "Expect '}' after block.".to_string())?;
+            Ok(statements)
+        }
+
+        fn statement(&mut self) -> Result<Stmt, Error> {
+            if matches!(self, TokenType::For) {
+                self.for_statement()
+            } else if matches!(self, TokenType::If) {
+                self.if_statement()
+            } else if matches!(self, TokenType::Print) {
+                self.print_statement()
+            } else if matches!(self, TokenType::Return) {
+                self.return_statement()
+            } else if matches!(self, TokenType::While) {
+                self.while_statement()
+            } else if matches!(self, TokenType::LeftBrace) {
+                Ok(Stmt::Block { statements: self.block()? })
+            } else {
+                self.expression_statement()
+            }
+        }
+
+        fn for_statement(&mut self) -> Result<Stmt, Error> {
+            self.consume(TokenType::LeftParen, "Expect '(' after 'for'.".to_string())?;
+
+            let initializer = if matches!(self, TokenType::Semicolon) {
+                None
+            } else if matches!(self, TokenType::Var) {
+                Some(self.var_declaration()?)
+            } else {
+                Some(self.expression_statement()?)
+            };
+
+            let condition = if !self.check(TokenType::Semicolon) {
+                Some(self.expression()?)
+            } else {
+                None
+            };
+
+            self.consume(TokenType::Semicolon, "Expect ';' after loop condition".to_string())?;
+
+            let increment = if !self.check(TokenType::RightParen) {
+                Some(self.expression()?)
+            } else {
+                None
+            };
+
+            self.consume(TokenType::RightParen, "Expect ')' after for clauses.".to_string())?;
+
+            let mut body = self.statement()?;
+
+            if let Some(inc) = increment {
+                let inc_stmt = Stmt::Expression { expression: inc };
+                body = Stmt::Block { statements: vec![body, inc_stmt] }
+            }
+
+            body = Stmt::While {
+                condition: condition.unwrap_or(Expr::Literal {
+                    value: LiteralValue::Boolean(true),
+                }),
+                body: Box::new(body),
+            };
+
+            if let Some(init_stmt) = initializer {
+                body = Stmt::Block { statements: vec![init_stmt, body] }
+            }
+
+            Ok(body)
+        }
+
+        fn if_statement(&mut self) -> Result<Stmt, Error> {
+            self.consume(TokenType::LeftParen, "Expect '(' after 'if'. ".to_string())?;
+            let condition = self.expression()?;
+            self.consume(TokenType::RightParen, "Expect ')' after if condition".to_string())?;
+
+            let then_branch = Box::new(self.statement()?);
+            let else_branch = if matches!(self, TokenType::Else) {
+                Box::new(Some(self.statement()?))
+            } else {
+                Box::new(None)
+            };
+
+            Ok(Stmt::If {
+                condition,
+                else_branch,
+                then_branch,
+            })
+        }
+
+        fn print_statement(&mut self) -> Result<Stmt, Error> {
+            let value = self.expression()?;
+            self.consume(TokenType::Semicolon, "Expect ';' after value.".to_string())?;
+            Ok(Stmt::Print { expression: value })
+        }
+
+        fn return_statement(&mut self) -> Result<Stmt, Error> {
+            let keyword: Token = self.previous().clone();
+            let value = if !self.check(TokenType::Semicolon) {
+                Some(self.expression()?)
+            } else {
+                None
+            };
+
+            self.consume(TokenType::Semicolon, "Expect ';' after return values".to_string())?;
+            Ok(Stmt::Return { keyword, value })
+        }
+
+        fn while_statement(&mut self) -> Result<Stmt, Error> {
+            self.consume(TokenType::LeftParen, "Expect '(' after 'while'.".to_string())?;
+            let condition = self.expression()?;
+            self.consume(TokenType::RightParen, "Expect ')' after condition.".to_string())?;
+            let body = Box::new(self.statement()?);
+
+            Ok(Stmt::While { condition, body })
+        }
+
+        fn expression_statement(&mut self) -> Result<Stmt, Error> {
+            let expr = self.expression()?;
+            self.consume(TokenType::Semicolon, "Expect ';' after expression.".to_string())?;
+            Ok(Stmt::Expression { expression: expr })
+        }
+
+        fn synchronize(&mut self) {
+            self.advance();
+
+            while !self.is_at_end() {
+                if self.previous().token_type == TokenType::Semicolon {
+                    return;
+                }
+
+                match self.peek().token_type {
+                    TokenType::Fun |
+                    TokenType::Var |
+                    TokenType::For |
+                    TokenType::If |
+                    TokenType::While |
+                    TokenType::Print |
+                    TokenType:: Return => return,
+                    _ => self.advance(),
+                };
+            }
+        }
+
 
         fn expression(&mut self) -> Result<Expr, Error> {
             self.assignment()
