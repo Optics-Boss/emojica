@@ -327,7 +327,7 @@ pub mod parser {
                 expr = Expr::Binary { 
                     left: Box::new(expr), 
                     operator,
-                    right:  Box::new(expr)
+                    right:  Box::new(right)
                 }
             }
 

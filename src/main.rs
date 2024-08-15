@@ -64,6 +64,6 @@ fn parser_error(token: &Token, message: String) {
     if token.token_type == TokenType::Eof {
         report(token.line, " at end".to_string(), message);
     } else {
-        report(token.line, " at end", message);
+        report(token.line, " at end".to_string(), message);
     }
 }
