@@ -1,4 +1,6 @@
 pub mod token {
+    use std::hash::{Hash, Hasher};
+
 
     #[derive(Debug, PartialEq, Clone)]
     pub enum TokenType {
@@ -9,7 +11,7 @@ pub mod token {
         And, Else, False, True, Fun, For, If, Nil, Or, Print, Return, Var, While, Eof
     }
 
-    #[derive(Clone)]
+    #[derive(Clone, Debug, PartialEq)]
     pub struct Token {
         pub token_type: TokenType,
         lexeme: String,
@@ -26,4 +28,12 @@ pub mod token {
         }
     }
 
+    impl Hash for Token {
+        fn hash<H: Hasher>(&self, state: &mut H) {
+            self.lexeme.hash(state);
+            self.line.hash(state);
+        }
+    }
+
+    impl Eq for Token {}
 }
