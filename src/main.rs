@@ -1,7 +1,11 @@
-use std::{env, fs};
-use std::process::ExitCode;
-use std::io::stdin;
+use std::{env, fs, io };
+use std::process::{exit, ExitCode};
+use std::io::{stdin, BufRead};
 
+use interpreter::interpreter::Interpreter;
+use parser::parser::{Error, Parser};
+use resolver::resolver::Resolver;
+use scanner::scanner::Scanner;
 use token::token::{Token, TokenType};
 
 pub mod token;
@@ -13,48 +17,76 @@ pub mod interpreter;
 pub mod environment;
 pub mod object;
 pub mod function;
+pub mod resolver;
 
-static ERROR_STATE : bool = false;
+fn main() -> Result<(), Box<dyn std::error::Error + 'static>> {
+    let args: Vec<String> = std::env::args().collect();
+    let mut emojica = Emojica::new();
+    match args.as_slice() {
+        [_, file] => match emojica.run_file(file) {
+            Ok(_) => (),
+            Err(Error::Return { .. }) => unreachable!(),
+            Err(Error::Runtime { message, .. }) => {
+                eprintln!("Error: {}", message);
+                exit(70)
+            }
+            Err(Error::Parse) => exit(65),
+            Err(Error::Io(_)) => unimplemented!(),
+        },
+        [_] => emojica.run_prompt()?,
+        _ => {
+            eprintln!("Usage: lox-rs [script]");
+            exit(64)
+        }
+    }
+    Ok(())
+}
 
-fn main() -> ExitCode {
-    let args: Vec<String> = env::args().collect();
+struct Emojica {
+    interpreter: Interpreter,
+}
 
-    if args.len() > 2 {
-        return ExitCode::from(64)
-    } else if args.len() == 2 {
-        let query = &args[1];
-        run_file(query.to_string());
-    } else {
-        run_prompt()
+impl Emojica {
+    fn new() -> Self {
+        Emojica {
+            interpreter: Interpreter::new(),
+        }
     }
 
-    ExitCode::SUCCESS
-}
-
-
-fn run_file(path: String) -> ExitCode {
-    let contents = fs::read_to_string(path)
-        .expect("Should have been able to read the file");
-
-    println!("With text:\n{contents}");
-    if ERROR_STATE {
-        return ExitCode::from(65);
+    fn run_file(&mut self, path: &str) -> Result<(), Error> {
+        let source = fs::read_to_string(path);
+        self.run(source?)
     }
 
-    ExitCode::SUCCESS
-}
-
-fn run_prompt(){
-    loop {
-        let mut buffer = String::new();
-        stdin().read_line(&mut buffer).unwrap();
-        run(buffer)
+    fn run_prompt(&mut self) -> Result<(), Error> {
+        let stdin = io::stdin();
+        for line in stdin.lock().lines() {
+            self.run(line?);
+            print!("> ");
+        }
+        Ok(())
     }
+
+  fn run(&mut self, source: String) -> Result<(), Error> {
+        let mut scanner = Scanner::new(source);
+        let tokens = scanner.scan_tokens();
+
+        let mut parser = Parser::new(tokens.to_vec());
+        let statements = parser.parse()?;
+
+        let mut resolver = Resolver::new(&mut self.interpreter);
+        resolver.resolve_stmts(&statements);
+
+        if resolver.had_error {
+            return Ok(());
+        }
+
+        self.interpreter.interpret(&statements)?;
+        Ok(())
+    }
+
 }
 
-fn run(source: String) {
-
-}
 
 fn error(line: i32, message: String) {
    report(line, String::from(""), message);

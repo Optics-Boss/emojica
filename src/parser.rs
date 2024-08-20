@@ -1,11 +1,37 @@
 pub mod parser {
+    use std::{convert, fmt, io};
+
     use crate::{expr::expr::{Expr, LiteralValue}, object::object::Object, parser_error, stmt::stmt::Stmt, token::token::{Token, TokenType}};
 
     #[derive(Debug)]
     pub enum Error {
+        Io(io::Error),
         Parse,
         Runtime { token: Token, message: String },
         Return { value: Object }
+    }
+
+    impl fmt::Display for Error {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match self {
+                Error::Io(underlying) => write!(f, "IoError {}", underlying),
+                Error::Parse => write!(f, "ParseError"),
+                Error::Return { value } => write!(f, "Return {:?}", value),
+                Error::Runtime { message, .. } => write!(f, "RuntimeError {}", message),
+            }
+        }
+    }
+
+    impl std::error::Error for Error {
+        fn description(&self) -> &str {
+            "Lox Error"
+        }
+    }
+
+    impl convert::From<io::Error> for Error {
+        fn from(e: io::Error) -> Self {
+            Error::Io(e)
+        }
     }
 
     pub struct Parser {
