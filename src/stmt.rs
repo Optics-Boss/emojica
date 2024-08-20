@@ -1,6 +1,7 @@
 pub mod stmt {
     use crate::{expr::expr::Expr, parser::parser::Error, token::token::Token};
 
+    #[derive(Clone, Debug)]
     pub enum Stmt {
         Block { statements: Vec<Stmt> },
         Expression { expression: Expr },

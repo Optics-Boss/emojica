@@ -1,6 +1,7 @@
 pub mod expr {
     use crate::{parser::parser::Error, token::token::Token};
-
+    
+    #[derive(Clone, Debug)]
     pub enum Expr {
         Assign {
             name: Token,
@@ -16,10 +17,6 @@ pub mod expr {
             paren: Token,
             arguments: Vec<Expr>
         },
-        Get {
-            object: Box<Expr>,
-            name: Token
-        },
         Grouping {
             expression: Box<Expr>,
         },
@@ -31,11 +28,6 @@ pub mod expr {
             operator: Token,
             right: Box<Expr>
         },
-        Set {
-            object: Box<Expr>,
-            name: Token,
-            value: Box<Expr>
-        },
         Unary {
             operator: Token,
             right: Box<Expr>
@@ -45,6 +37,7 @@ pub mod expr {
         }
     }
 
+    #[derive(Clone, Debug)]
     pub enum LiteralValue {
         Boolean(bool),
         Null,
@@ -56,11 +49,9 @@ pub mod expr {
         fn visit_assign_expr(&mut self, name: &Token, value: &Expr) -> Result<R, Error>;
         fn visit_binary_expr(&mut self, left: &Expr, operator: &Token, right: &Expr) -> Result<R, Error>;
         fn visit_call_expr(&mut self, callee: &Expr, paren: &Token, arguments: &Vec<Expr>) -> Result<R, Error>;
-        fn visit_get_expr(&mut self, object: &Expr, name: &Token) -> Result<R, Error>;
         fn visit_grouping_expr(&mut self, expression: &Expr) -> Result<R, Error>;
         fn visit_literal_expr(&mut self, value: &LiteralValue) -> Result<R, Error>;
         fn visit_logical_expr(&mut self, left: &Expr, operator: &Token, right: &Expr) -> Result<R, Error>;
-        fn visit_set_expr(&mut self, object: &Expr, name: &Token, value: &Expr) -> Result<R, Error>;
         fn visit_unary_expr(&mut self, operator: &Token, right: &Expr) -> Result<R, Error>;
         fn visit_variable_expr(&mut self, name: &Token) -> Result<R, Error>;
     }
@@ -75,14 +66,10 @@ pub mod expr {
                 Expr::Call { callee, paren, arguments } => {
                     visitor.visit_call_expr(callee, paren, arguments)
                 },
-                Expr::Get { object, name } => visitor.visit_get_expr(object, name),
                 Expr::Grouping { expression } => visitor.visit_grouping_expr(expression),
                 Expr::Literal { value } => visitor.visit_literal_expr(value),
                 Expr::Logical { left, operator, right } => {
                     visitor.visit_logical_expr(left, operator, right)
-                },
-                Expr::Set { object, name, value } => {
-                    visitor.visit_set_expr(object, name, value)
                 },
                 Expr::Unary { operator, right } => visitor.visit_unary_expr(operator, right),
                 Expr::Variable { name } => visitor.visit_variable_expr(name),

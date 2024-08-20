@@ -1,9 +1,11 @@
 pub mod parser {
-    use crate::{expr::expr::{Expr, LiteralValue}, parser_error, stmt::stmt::Stmt, token::token::{Token, TokenType}};
+    use crate::{expr::expr::{Expr, LiteralValue}, object::object::Object, parser_error, stmt::stmt::Stmt, token::token::{Token, TokenType}};
 
     #[derive(Debug)]
     pub enum Error {
         Parse,
+        Runtime { token: Token, message: String },
+        Return { value: Object }
     }
 
     pub struct Parser {
@@ -269,13 +271,7 @@ pub mod parser {
 
                 if let Expr::Variable {name} = expr {
                     return Ok(Expr::Assign { name, value })
-                } else if let Expr::Get { object, name } = expr {
-                    return Ok(Expr::Set { 
-                        object,
-                        name,
-                        value 
-                    })
-                }
+                } 
 
                 let equals = self.previous();
                 self.error(equals, "Invalid assignment target.".to_string());
@@ -410,7 +406,6 @@ pub mod parser {
                     expr = self.finish_call(expr)?;
                 } else if matches!(self, TokenType::Dot) {
                     let name = self.consume(TokenType::Identifier, "Expect property after '.'.".to_string())?;
-                    expr = Expr::Get { object: Box::new(expr), name }
                 } else {
                     break;
                 }

@@ -14,7 +14,7 @@ pub mod token {
     #[derive(Clone, Debug, PartialEq)]
     pub struct Token {
         pub token_type: TokenType,
-        lexeme: String,
+        pub lexeme: String,
         pub line: i32,
     }
 

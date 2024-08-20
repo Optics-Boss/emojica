@@ -1,6 +1,7 @@
 pub mod object {
     use crate::function::function::Function;
 
+    #[derive(Clone, Debug)]
     pub enum Object {
         Boolean(bool),
         Callable(Function),
