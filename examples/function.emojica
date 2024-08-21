@@ -1,0 +1,5 @@
+fun sayHi(first) {
+  print first;
+}
+
+sayHi("Dear");

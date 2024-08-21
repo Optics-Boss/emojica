@@ -1,0 +1,6 @@
+var increment = 0;
+
+while (increment < 20000) {
+  print increment;
+  increment = increment + 1;
+}

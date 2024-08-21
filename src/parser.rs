@@ -457,6 +457,9 @@ pub mod parser {
                 }
             }
 
+            println!("test");
+
+            println!("{:?}", self.tokens.get(self.current).unwrap().token_type);
             let parent = self.consume(TokenType::RightParen, "Expect ')' after arguments.".to_string())?;
             Ok(Expr::Call {
                 callee: Box::new(callee),
